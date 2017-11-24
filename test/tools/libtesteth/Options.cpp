@@ -58,8 +58,8 @@ void printHelp()
 	cout << setw(30) << "--fillchain" << setw(25) << "When filling the state tests, fill tests as blockchain instead\n";
 	cout << setw(30) << "--randomcode <MaxOpcodeNum>" << setw(25) << "Generate smart random EVM code\n";
 	cout << setw(30) << "--createRandomTest" << setw(25) << "Create random test and output it to the console\n";
+	cout << setw(30) << "--createRandomTest <PathToOptions.json>" << setw(25) << "Use following options file for random code generation\n";
 	cout << setw(30) << "--seed <uint>" << setw(25) << "Define a seed for random test\n";
-	cout << setw(30) << "--options <PathTo.json>" << setw(25) << "Use following options file for random code generation\n";
 	//cout << setw(30) << "--fulloutput" << setw(25) << "Disable address compression in the output field\n";
 
 	cout << setw(30) << "--help" << setw(25) << "Display list of command arguments\n";
@@ -205,8 +205,6 @@ Options::Options(int argc, char** argv)
 			if (indentLevelInt > g_logVerbosity)
 				g_logVerbosity = indentLevelInt;
 		}
-		else if (arg == "--createRandomTest")
-			createRandomTest = true;
 		else if (arg == "--seed")
 		{
 			throwIfNoArgumentFollows();
@@ -214,18 +212,6 @@ Options::Options(int argc, char** argv)
 			if (input > std::numeric_limits<uint64_t>::max())
 				BOOST_WARN("Seed is > u64. Using u64_max instead.");
 			randomTestSeed = static_cast<uint64_t>(min<u256>(std::numeric_limits<uint64_t>::max(), input));
-		}
-		else if (arg == "--options")
-		{
-			throwIfNoArgumentFollows();
-			boost::filesystem::path file(std::string{argv[++i]});
-			if (boost::filesystem::exists(file))
-				randomCodeOptionsPath = file;
-			else
-			{
-				std::cerr << "Options file not found! Default options at: tests/src/randomCodeOptions.json\n";
-				exit(0);
-			}
 		}
 		else if (arg == "-t")
 		{
@@ -271,7 +257,26 @@ Options::Options(int argc, char** argv)
 			exit(0);
 		}
 		else if (arg == "--createRandomTest")
+		{
 			createRandomTest = true;
+			if (i + 1 < argc) // two params
+			{
+				auto options = std::string{argv[++i]};
+				if (options[0] == '-') // not param, another option
+					i--;
+				else
+				{
+					boost::filesystem::path file(options);
+					if (boost::filesystem::exists(file))
+						randomCodeOptionsPath = file;
+					else
+					{
+						std::cerr << "Options file not found! Default options at: tests/src/randomCodeOptions.json\n";
+						exit(0);
+					}
+				}
+			}
+		}
 		else if (seenSeparator)
 		{
 			cerr << "Unknown option: " + arg << "\n";
